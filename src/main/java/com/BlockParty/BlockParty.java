@@ -11,8 +11,6 @@ public final class BlockParty extends JavaPlugin {
     public void onEnable() {
         getLogger().info("Starting up BlockParty Plugin...");
 
-        saveDefaultConfig();
-
         getServer().getPluginManager().registerEvents(
                 new RoundManager(this),
                 this
