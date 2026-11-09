@@ -1,7 +1,12 @@
-package com.blockparty;
+package com.BlockParty.game;
 
+import com.BlockParty.BlockParty;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.event.HandlerList;
+import org.bukkit.scheduler.BukkitTask;
+import org.jspecify.annotations.NonNull;
 import wueffi.MiniGameCore.utils.Lobby;
-import wueffi.MiniGameCore.api.GameStartEvent;
 import wueffi.MiniGameCore.api.MiniGameCoreAPI;
 
 import org.bukkit.Bukkit;
@@ -15,13 +20,10 @@ import org.bukkit.block.Block;
 import org.bukkit.Material;
 import org.bukkit.event.entity.PlayerDeathEvent;
 
-
-import net.kyori.adventure.text.Component;
-
-import java.util.Random;
-import java.util.UUID;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
 public class Round implements Listener {
     
@@ -31,38 +33,75 @@ public class Round implements Listener {
     public int PlayersAlive;
 
     private final BlockParty plugin;
+    private boolean running = true;
+    private final Set<UUID> alivePlayers = new HashSet<>();
+    private final Set<BukkitTask> tasks = new HashSet<>();
 
-    public Round(BlockParty plugin) {
+    public Round(BlockParty plugin, Lobby lobby) {
         this.plugin = plugin;
+        this.lobby = lobby;
+        this.world = Bukkit.getWorld(lobby.getWorldFolder().getName());
+        this.owner = lobby.getOwner();
+        this.PlayersAlive = lobby.getPlayers().size();
+        for (Player player : lobby.getPlayers()) {
+            alivePlayers.add(player.getUniqueId());
+        }
     }
 
-    @EventHandler
-    public void onGameStart(GameStartEvent event) {
+    public void runRound(float SpeedMult) {
+        if (!running) return;
+        schedule(this::RestoreArena, 20L * 3);
+        final Material Color = getColor();
 
-        if (!event.getGameName().equalsIgnoreCase("BlockParty")) {
-            return;
+        ItemStack item = new ItemStack(Color, 1);
+        for (Player player : lobby.getPlayers()) {
+            player.getInventory().setItem(1, item);
+            player.getInventory().setItem(7, item);
         }
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            Round(1.234f);
-        }, 20L * 10);
+        schedule(() -> {
 
-        lobby = event.getLobby();
-        world = Bukkit.getWorld(lobby.getWorldFolder().getName());
-        owner = lobby.getOwner();
-        PlayersAlive = lobby.getPlayers().size();
+            for (Player player : lobby.getPlayers()) {
+                player.getInventory().setItem(1, item);
+                player.getInventory().setItem(7, item);
+            }
+        }, (long) (20L * 0.1));
+
+        schedule(() -> {
+            for (Player player : lobby.getPlayers()) {
+                player.sendActionBar(Component.text("3", NamedTextColor.RED));
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f, 1.0f);
+            }
+        }, (long) (20L * 1 * SpeedMult));
+        schedule(() -> {
+            for (Player player : lobby.getPlayers()) {
+                player.sendActionBar(Component.text("2", NamedTextColor.RED));
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f, 1.0f);
+            }
+        }, (long) (20L * 2 * SpeedMult));
+        schedule(() -> {
+            for (Player player : lobby.getPlayers()) {
+                player.sendActionBar(Component.text("1", NamedTextColor.RED));
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f, 1.0f);
+            }
+        }, (long) (20L * 3 * SpeedMult));
+        schedule(() -> {
+            for (Player player : lobby.getPlayers()) {
+                player.sendActionBar(Component.text("Watch Your Step!", NamedTextColor.RED));
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f, 2.0f);
+            }
+            RemoveAllBlocksExcept(Color);
+            schedule(this::RestoreArena, 20L * 3);
+            schedule(() -> runRound(SpeedMult * 0.95f), 20L * 5);
+
+        }, (long) (20L * 4 * SpeedMult));
     }
-    
-    public void Round(float SpeedMult) {
 
-        Bukkit.dispatchCommand(
-            owner,
-            "clone 14 -40 15 -18 -40 -16 -18 -31 -16"
-        );  
+    private static @NonNull Material getColor() {
         Random random = new Random();
         int NumberColor = random.nextInt(16) + 1;
-        
-        final Material Color = switch (NumberColor) {
+
+        return switch (NumberColor) {
             case 1 -> Material.RED_WOOL;
             case 2 -> Material.ORANGE_WOOL;
             case 3 -> Material.YELLOW_WOOL;
@@ -77,66 +116,9 @@ public class Round implements Listener {
             case 12 -> Material.WHITE_WOOL;
             case 13 -> Material.LIGHT_GRAY_WOOL;
             case 14 -> Material.GRAY_WOOL;
-            case 15 -> Material.BLACK_WOOL;
-            case 16 -> Material.BROWN_WOOL;
+            case 15 -> Material.BROWN_WOOL;
             default -> Material.BLACK_WOOL;
         };
-
-        ItemStack item = new ItemStack(Color, 1);
-        for (Player player : lobby.getPlayers()) {
-            player.getInventory().setItem(1, item);
-            player.getInventory().setItem(7, item);
-        }
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            
-            for (Player player : lobby.getPlayers()) {
-                player.getInventory().setItem(1, item);
-                player.getInventory().setItem(7, item);
-            }
-        }, (long) (20L * 0.1));
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            for (Player player : lobby.getPlayers()) {
-                player.sendActionBar("§c3");
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f, 1.0f);
-            }
-        }, (long) (20L * 1 * SpeedMult));
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            for (Player player : lobby.getPlayers()) {
-                player.sendActionBar("§c2");
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f, 1.0f);
-            }
-        }, (long) (20L * 2 * SpeedMult));
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            for (Player player : lobby.getPlayers()) {
-                player.sendActionBar("§c1");
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f, 1.0f);
-            }
-        }, (long) (20L * 3 * SpeedMult));
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            for (Player player : lobby.getPlayers()) {
-                player.sendActionBar("§cWatch Your Step!");
-                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f, 2.0f);
-            }
-            RemoveAllBlocksExcept(Color);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                Bukkit.dispatchCommand(
-                    owner,
-                    "clone 14 -40 15 -18 -40 -16 -18 -31 -16"
-                );
-            }, 20L * 3);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (lobby.getPlayers().size() == 1) {
-                    Player winner = lobby.getPlayers().iterator().next();
-
-                    Bukkit.broadcastMessage("§a" + winner.getName() + " has won!");
-
-                }
-                Round(SpeedMult * 0.95f);
-            }, 20L * 5);
-
-        }, (long) (20L * 4 * SpeedMult));
     }
 
     public void RemoveAllBlocksExcept(Material blockType) {
@@ -154,15 +136,44 @@ public class Round implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
 
-        if (!lobby.getPlayers().contains(player)) {
+        if (!running || !alivePlayers.remove(player.getUniqueId())) {
             return;
         }
 
-        PlayersAlive -= 1;
+        if (alivePlayers.size() == 1) {
+            UUID winnerUUID = alivePlayers.iterator().next();
 
-        if (PlayersAlive == 1) {
-            Player winner = lobby.getPlayers().iterator().next();
-            MiniGameCoreAPI.winPlayer(lobby, winner);
+            Player winner = Bukkit.getPlayer(winnerUUID);
+
+            if (winner != null) {
+                running = false;
+                MiniGameCoreAPI.winPlayer(lobby, winner);
+
+                for (BukkitTask task : tasks) {
+                    task.cancel();
+                }
+
+                tasks.clear();
+                HandlerList.unregisterAll(this);
+            }
         }
+    }
+
+    public void RestoreArena() {
+        for (int x = -18; x <= 14; x++) {
+            for (int z = -16; z <= 15; z++) {
+                Block source = world.getBlockAt(x, -40, z);
+                Block target = world.getBlockAt(x, -31, z);
+
+                target.setBlockData(source.getBlockData(), false);
+            }
+        }
+    }
+
+    private void schedule(Runnable task, long delay) {
+        if (!running) return;
+
+        BukkitTask scheduled = Bukkit.getScheduler().runTaskLater(plugin, () -> { if (running) task.run(); }, delay);
+        tasks.add(scheduled);
     }
 }

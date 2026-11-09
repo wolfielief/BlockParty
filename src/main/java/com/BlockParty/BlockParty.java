@@ -1,32 +1,29 @@
-package com.blockparty;
+package com.BlockParty;
 
+import com.BlockParty.game.Round;
+import com.BlockParty.game.RoundManager;
+import com.BlockParty.generic.copyWorldAndConfig;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.Bukkit;
-import wueffi.MiniGameCore.managers.LobbyManager;
-import wueffi.MiniGameCore.utils.Lobby;
-import org.bukkit.World;
 
 public final class BlockParty extends JavaPlugin {
 
     @Override
     public void onEnable() {
-
-        getLogger().info("BlockParty has been enabled!");
-        getLogger().info("GameManager initialized!");
+        getLogger().info("Starting up BlockParty Plugin...");
 
         saveDefaultConfig();
 
         getServer().getPluginManager().registerEvents(
-            new Round(this),
-            this
-        ); 
+                new RoundManager(this),
+                this
+        );
+        getLogger().info("Registered Events!");
 
+        copyWorldAndConfig.setup(this);
     }
 
     @Override
     public void onDisable() {
         getLogger().info("BlockParty has been disabled!");
     }
-    
-
 }
