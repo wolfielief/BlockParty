@@ -1,6 +1,6 @@
 name: BlockParty
 version: 1.0.0
-main: com.blockparty.BlockParty
+main: com.Blockparty.BlockParty
 api-version: '1.21'
 depend: [MiniGameCore]
 authors: [ "TopHat [Mr_TopHatGuy]" ]
